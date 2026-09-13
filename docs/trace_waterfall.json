@@ -1,29 +1,161 @@
 [
   {
     "step": 1,
-    "query": "Chào bạn, bạn có thể giới thiệu quy chế học vụ cơ bản của Đại học VinUni không?",
+    "query": "Tôi cần lưu ý gì khi sạc xe điện VinFast tại trạm sạc công cộng?",
     "action_type": "FINAL_ANSWER",
-    "thought": "Câu hỏi chung về quy chế học vụ, trả lời trực tiếp không cần gọi Tool.",
-    "output": "[Mock Agent Response]: Xin chào! Quy chế học vụ VinUni yêu cầu sinh viên tích lũy tối thiểu 120 tín chỉ và duy trì GPA trên 2.0 để tốt nghiệp.",
-    "latency_ms": 2845.93
+    "thought": "OpenAI phản hồi trực tiếp bằng văn bản (không cần gọi công cụ).",
+    "output": "Khi sạc xe điện VinFast tại trạm sạc công cộng, bạn cần lưu ý một số điều sau:\n\n1. **Kiểm tra tình trạng trạm sạc**: Đảm bảo rằng trạm sạc đang hoạt động và có cổng sạc còn trống.\n2. **Chọn loại cổng sạc phù hợp**: Xác định loại cổng sạc (DC Fast hoặc AC) tương thích với xe của bạn.\n3. **Thời gian sạc**: Lên kế hoạch thời gian sạc để tránh xung đột với các xe khác.\n4. **Chuẩn bị thông tin cần thiết**: Có thể bạn sẽ cần mang theo thông tin về xe (biển số hoặc mã xe) khi sử dụng dịch vụ.\n5. **Kiểm tra các quy định tại trạm**: Một số trạm có quy định riêng về thời gian sử dụng hoặc cách thức thanh toán.\n6. **Giám sát quá trình sạc**: Theo dõi quá trình sạc qua ứng dụng hoặc màn hình tại trạm (nếu có) để đảm bảo mọi thứ diễn ra thuận lợi.\n7. **Bảo vệ an toàn**: Đảm bảo an toàn cho bản thân và xe khi sử dụng trạm sạc (tránh các yếu tố môi trường có thể gây nguy hiểm).\n\nNếu bạn cần tìm một trạm sạc cụ thể hoặc đặt chỗ, hãy cho tôi biết!",
+    "latency_ms": 3352.65
   },
   {
     "step": 1,
-    "query": "Hãy tra cứu thông tin học vụ của sinh viên SV2026001.",
+    "query": "Tìm các trạm sạc VinFast còn cổng DC Fast trống tại Bình Thạnh.",
     "action_type": "TOOL_EXECUTION",
-    "tool_name": "academic_query",
+    "tool_name": "charging_station_query",
     "arguments": {
-      "student_id": "SV2026001"
+      "location": "Bình Thạnh",
+      "connector_type": "DC Fast"
     },
-    "observation": {},
-    "latency_ms": 799.12
+    "observation": {
+      "status": "SUCCESS",
+      "location": "Bình Thạnh",
+      "datetime": "",
+      "stations": [
+        {
+          "station_id": "ST001",
+          "name": "VinFast Landmark 81",
+          "location": "Bình Thạnh, TP.HCM",
+          "available_connectors": [
+            {
+              "connector_id": "C01",
+              "type": "DC Fast",
+              "status": "AVAILABLE"
+            }
+          ]
+        }
+      ]
+    },
+    "latency_ms": 1060.49
   },
   {
     "step": 2,
-    "query": "Hãy tra cứu thông tin học vụ của sinh viên SV2026001.",
+    "query": "Tìm các trạm sạc VinFast còn cổng DC Fast trống tại Bình Thạnh.",
     "action_type": "FINAL_ANSWER",
-    "thought": "Tổng hợp kết quả từ MCP Server thành công.",
-    "output": "Chưa thể trả lời chi tiết do chưa nhận được dữ liệu từ MCP Server (hãy hoàn thành TODO 2.1).",
-    "latency_ms": 10.0
+    "thought": "Đã có đủ kết quả từ Tool để trả lời người dùng.",
+    "output": "Các trạm sạc phù hợp:\n- VinFast Landmark 81 (Bình Thạnh, TP.HCM) - Cổng trống: C01 (DC Fast)",
+    "latency_ms": 0.0
+  },
+  {
+    "step": 1,
+    "query": "Đặt trước cổng C01 tại trạm ST001 lúc 14:00 ngày 15/09/2026 cho xe VF8-12345.",
+    "action_type": "TOOL_EXECUTION",
+    "tool_name": "reserve_charging_slot",
+    "arguments": {
+      "station_id": "ST001",
+      "connector_id": "C01",
+      "datetime_str": "14:00 15/09/2026",
+      "vehicle_id": "VF8-12345"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "reservation_id": "RS-ST001-C01-001",
+      "station_id": "ST001",
+      "connector_id": "C01",
+      "datetime": "14:00 15/09/2026",
+      "vehicle_id": "VF8-12345",
+      "message": "Đặt trước cổng sạc thành công."
+    },
+    "latency_ms": 1177.92
+  },
+  {
+    "step": 2,
+    "query": "Đặt trước cổng C01 tại trạm ST001 lúc 14:00 ngày 15/09/2026 cho xe VF8-12345.",
+    "action_type": "FINAL_ANSWER",
+    "thought": "Đã có đủ kết quả từ Tool để trả lời người dùng.",
+    "output": "Đặt trước cổng C01 tại trạm ST001 thành công vào lúc 14:00 15/09/2026. Mã đặt chỗ: RS-ST001-C01-001.",
+    "latency_ms": 0.0
+  },
+  {
+    "step": 1,
+    "query": "Tìm trạm sạc còn cổng DC Fast trống tại Bình Thạnh, sau đó đặt cổng phù hợp lúc 14:00 ngày 15/09/2026 cho xe VF8-12345.",
+    "action_type": "TOOL_EXECUTION",
+    "tool_name": "charging_station_query",
+    "arguments": {
+      "location": "Bình Thạnh",
+      "datetime_str": "14:00 15/09/2026",
+      "connector_type": "DC Fast"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "location": "Bình Thạnh",
+      "datetime": "14:00 15/09/2026",
+      "stations": [
+        {
+          "station_id": "ST001",
+          "name": "VinFast Landmark 81",
+          "location": "Bình Thạnh, TP.HCM",
+          "available_connectors": [
+            {
+              "connector_id": "C01",
+              "type": "DC Fast",
+              "status": "AVAILABLE"
+            }
+          ]
+        }
+      ]
+    },
+    "latency_ms": 1124.23
+  },
+  {
+    "step": 2,
+    "query": "Tìm trạm sạc còn cổng DC Fast trống tại Bình Thạnh, sau đó đặt cổng phù hợp lúc 14:00 ngày 15/09/2026 cho xe VF8-12345.",
+    "action_type": "TOOL_EXECUTION",
+    "tool_name": "reserve_charging_slot",
+    "arguments": {
+      "station_id": "ST001",
+      "connector_id": "C01",
+      "datetime_str": "14:00 15/09/2026",
+      "vehicle_id": "VF8-12345"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "reservation_id": "RS-ST001-C01-001",
+      "station_id": "ST001",
+      "connector_id": "C01",
+      "datetime": "14:00 15/09/2026",
+      "vehicle_id": "VF8-12345",
+      "message": "Đặt trước cổng sạc thành công."
+    },
+    "latency_ms": 1047.39
+  },
+  {
+    "step": 3,
+    "query": "Tìm trạm sạc còn cổng DC Fast trống tại Bình Thạnh, sau đó đặt cổng phù hợp lúc 14:00 ngày 15/09/2026 cho xe VF8-12345.",
+    "action_type": "FINAL_ANSWER",
+    "thought": "Đã có đủ kết quả từ Tool để trả lời người dùng.",
+    "output": "Đặt trước cổng C01 tại trạm ST001 thành công vào lúc 14:00 15/09/2026. Mã đặt chỗ: RS-ST001-C01-001.",
+    "latency_ms": 0.0
+  },
+  {
+    "step": 1,
+    "query": "Tìm trạm sạc VinFast còn cổng trống tại Cần Thơ.",
+    "action_type": "TOOL_EXECUTION",
+    "tool_name": "charging_station_query",
+    "arguments": {
+      "location": "Cần Thơ"
+    },
+    "observation": {
+      "status": "NOT_FOUND",
+      "message": "Không tìm thấy trạm sạc còn cổng phù hợp tại Cần Thơ."
+    },
+    "latency_ms": 1140.48
+  },
+  {
+    "step": 2,
+    "query": "Tìm trạm sạc VinFast còn cổng trống tại Cần Thơ.",
+    "action_type": "FINAL_ANSWER",
+    "thought": "Đã có đủ kết quả từ Tool để trả lời người dùng.",
+    "output": "Không tìm thấy trạm sạc còn cổng phù hợp tại Cần Thơ.",
+    "latency_ms": 0.0
   }
 ]

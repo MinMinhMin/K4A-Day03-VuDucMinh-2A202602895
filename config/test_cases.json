@@ -1,0 +1,37 @@
+[
+  {
+    "id": "TC01",
+    "type": "direct_query",
+    "question": "Tôi cần lưu ý gì khi sạc xe điện VinFast tại trạm sạc công cộng?",
+    "expected_behavior": "Chatbot trả lời kiến thức chung từ System Prompt, không cần gọi bất kỳ Tool nào.",
+    "complexity": "Low"
+  },
+  {
+    "id": "TC02",
+    "type": "single_tool_query",
+    "question": "Tìm các trạm sạc VinFast còn cổng DC Fast trống tại Bình Thạnh.",
+    "expected_behavior": "Agent gọi Tool 'charging_station_query' với location là 'Bình Thạnh' và connector_type là 'DC Fast'.",
+    "complexity": "Medium"
+  },
+  {
+    "id": "TC03",
+    "type": "reservation_booking",
+    "question": "Đặt trước cổng C01 tại trạm ST001 lúc 14:00 ngày 15/09/2026 cho xe VF8-12345.",
+    "expected_behavior": "Agent gọi Tool 'reserve_charging_slot' với station_id là 'ST001', connector_id là 'C01', datetime_str là '14:00 15/09/2026' và vehicle_id là 'VF8-12345'.",
+    "complexity": "Medium"
+  },
+  {
+    "id": "TC04",
+    "type": "multi_step_reasoning",
+    "question": "Tìm trạm sạc còn cổng DC Fast trống tại Bình Thạnh, sau đó đặt cổng phù hợp lúc 14:00 ngày 15/09/2026 cho xe VF8-12345.",
+    "expected_behavior": "Agent trước tiên gọi 'charging_station_query', sau đó sử dụng station_id và connector_id từ Observation để gọi 'reserve_charging_slot'.",
+    "complexity": "High"
+  },
+  {
+    "id": "TC05",
+    "type": "edge_case_handling",
+    "question": "Tìm trạm sạc VinFast còn cổng trống tại Cần Thơ.",
+    "expected_behavior": "Agent nhận kết quả NOT_FOUND từ 'charging_station_query' và thông báo lịch sự rằng không tìm thấy trạm phù hợp, không bịa đặt dữ liệu.",
+    "complexity": "Medium"
+  }
+]

@@ -6,7 +6,11 @@ Mô phỏng kiến trúc MCP Server (Client-Server Architecture) cung cấp côn
 import json
 import sys
 from typing import Dict, Any, List
-from tools import TOOLS_SCHEMA, dispatch_tool_call
+
+try:
+    from tools import TOOLS_SCHEMA, dispatch_tool_call
+except ModuleNotFoundError:
+    from .tools import TOOLS_SCHEMA, dispatch_tool_call
 
 if sys.stdout.encoding != 'utf-8':
     try:
@@ -14,11 +18,11 @@ if sys.stdout.encoding != 'utf-8':
     except Exception:
         pass
 
-class MCPAcademicServer:
+class MCPChargingServer:
     """
     Giả lập MCP Server tuân thủ chuẩn giao thức Model Context Protocol
     """
-    def __init__(self, server_name: str = "vinuni-academic-mcp-server"):
+    def __init__(self, server_name: str = "vinfast-charging-mcp-server"):
         self.server_name = server_name
         self.version = "2026.1.0"
         
@@ -28,41 +32,55 @@ class MCPAcademicServer:
         
     def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        [TASK 2.1] HỌC VIÊN HOÀN THIỆN HÀM THỰC THI TOOL TRÊN MCP SERVER
         Thực thi request gọi Tool theo chuẩn MCP JSON-RPC
         """
-        # --------------------------------------------------------------------------
-        # TODO 2.1: HỌC VIÊN HOÀN THIỆN HÀM GỌI TOOL CHUẨN MCP JSON-RPC
-        # 🎯 YÊU CẦU THỰC THI THUẬT TOÁN:
-        # 1. Gọi hàm dispatch_tool_call(tool_name, arguments) để lấy chuỗi JSON kết quả từ Tool Router.
-        # 2. Chuyển đổi chuỗi JSON kết quả thành Python Dictionary (dùng json.loads).
-        # 3. Đóng gói phản hồi và trả về Dict theo đúng chuẩn giao thức MCP JSON-RPC 2.0:
-        #    - Các trường bắt buộc: "jsonrpc": "2.0", "server": self.server_name, "tool": tool_name, "result": content
-        # --------------------------------------------------------------------------
-        return {}
+        raw_result = dispatch_tool_call(tool_name, arguments)
+
+        try:
+            content = json.loads(raw_result)
+        except (TypeError, json.JSONDecodeError) as exc:
+            content = {
+                "status": "EXECUTION_ERROR",
+                "error": f"Không thể phân tích kết quả Tool: {str(exc)}",
+                "raw_result": raw_result
+            }
+
+        return {
+            "jsonrpc": "2.0",
+            "server": self.server_name,
+            "tool": tool_name,
+            "result": content
+        }
+
+
+# Giữ tương thích với src/app.py hiện tại trong khi các file khác được cập nhật.
+MCPAcademicServer = MCPChargingServer
 
 
 if __name__ == "__main__":
     print("==========================================================")
-    print("🔌 KIỂM THỬ ĐỘC LẬP MCP SERVER (vinuni-academic-mcp-server)")
+    print("🔌 KIỂM THỬ ĐỘC LẬP MCP SERVER (vinfast-charging-mcp-server)")
     print("==========================================================")
-    
-    server = MCPAcademicServer()
+
+    server = MCPChargingServer()
     tools = server.list_tools()
     print(f"✅ Khởi tạo thành công MCP Server: {server.server_name} (Version: {server.version})")
     print(f"📦 Số lượng Tools công bố: {len(tools)}")
-    
-    # Kiểm tra trạng thái TODO 1.2 (Tool Schema)
-    sched_tool = next((t for t in tools if t.get("name") == "schedule_appointment"), None)
-    if sched_tool and not sched_tool.get("parameters", {}).get("properties"):
-        print("⏳ [TODO 1.2]: Tool 'schedule_appointment' chưa được định nghĩa properties trong 'src/tools.py'.")
-    else:
-        print("✅ [TODO 1.2]: Tool 'schedule_appointment' đã có schema đầy đủ.")
 
-    # Kiểm tra trạng thái TODO 2.1 (call_tool)
-    test_result = server.call_tool("academic_query", {"student_id": "SV2026001"})
-    if not test_result:
-        print("⏳ [TODO 2.1]: Hàm call_tool() đang trả về rỗng. Học viên hãy hoàn thiện TODO 2.1 trong 'src/mcp_server.py'!")
+    # Kiểm tra schema của tool đặt trước cổng sạc.
+    reserve_tool = next((t for t in tools if t.get("name") == "reserve_charging_slot"), None)
+    if reserve_tool and reserve_tool.get("parameters", {}).get("properties"):
+        print("✅ Tool 'reserve_charging_slot' đã có schema đầy đủ.")
     else:
-        print(f"✅ [TODO 2.1]: Test dispatch tool 'academic_query' thành công:")
+        print("⏳ Tool 'reserve_charging_slot' chưa có schema đầy đủ.")
+
+    # Kiểm tra gọi tool tra cứu trạm sạc qua MCP.
+    test_result = server.call_tool(
+        "charging_station_query",
+        {"location": "Bình Thạnh", "connector_type": "DC Fast"}
+    )
+    if test_result.get("result", {}).get("status") != "SUCCESS":
+        print("⏳ Kiểm tra gọi tool charging_station_query chưa thành công.")
+    else:
+        print("✅ Test dispatch tool 'charging_station_query' thành công:")
         print(f"   Phản hồi JSON-RPC: {json.dumps(test_result, ensure_ascii=False)}")

@@ -4,6 +4,7 @@ Mã nguồn chứa danh sách Tool Schemas (JSON Schema) và Execution Layer ph�
 """
 
 import json
+from copy import deepcopy
 from typing import Dict, Any
 
 # ==============================================================================
@@ -11,41 +12,62 @@ from typing import Dict, Any
 # ==============================================================================
 
 TOOLS_SCHEMA = [
-    # Tool 1: Đã được định nghĩa mẫu sẵn cho Học viên tham khảo
+    # Tool 1: Tra cứu trạm sạc
     {
-        "name": "academic_query",
-        "description": "Tra cứu hồ sơ và thông tin học vụ của sinh viên VinUni bằng mã sinh viên.",
+        "name": "charging_station_query",
+        "description": "Tra cứu các trạm sạc xe điện VinFast theo vị trí, thời gian và loại cổng sạc.",
         "parameters": {
             "type": "object",
             "properties": {
-                "student_id": {
+                "location": {
                     "type": "string",
-                    "description": "Mã sinh viên cần tra cứu (ví dụ: 'SV2026001')"
+                    "description": "Địa điểm hoặc khu vực cần tìm trạm sạc"
+                },
+                "datetime_str": {
+                    "type": "string",
+                    "description": "Thời gian dự kiến sạc, ví dụ: '14:00 15/09/2026'"
+                },
+                "connector_type": {
+                    "type": "string",
+                    "description": "Loại cổng sạc mong muốn, ví dụ: 'DC Fast' hoặc 'AC'"
                 }
             },
-            "required": ["student_id"]
+            "required": ["location"]
         }
     },
-    
+
     # --------------------------------------------------------------------------
-    # TODO 1.2: HỌC VIÊN HOÀN THIỆN TOOL SCHEMA CHO 'schedule_appointment'
-    # 🎯 YÊU CẦU THIẾT KẾ SCHEMA (JSON SCHEMA STANDARD):
-    # 1. Tool dùng để đặt lịch hẹn tư vấn học vụ với Cố vấn học tập VinUni.
-    # 2. Thiết kế các tham số (properties) để LLM trích xuất:
-    #    - student_id (string): Mã sinh viên cần đặt lịch (ví dụ: 'SV2026001')
-    #    - datetime_str (string): Thời gian hẹn (ví dụ: '14:00 15/09/2026')
-    #    - advisor_name (string): Tên cố vấn học tập
-    # 3. Khai báo danh sách các trường bắt buộc (required).
+    # Tool 2: Đặt trước cổng sạc
     # --------------------------------------------------------------------------
     {
-        "name": "schedule_appointment",
-        "description": "Đặt lịch hẹn tư vấn học vụ với Cố vấn học tập VinUni.",
+        "name": "reserve_charging_slot",
+        "description": "Đặt trước một cổng sạc tại trạm sạc xe điện VinFast.",
         "parameters": {
             "type": "object",
             "properties": {
-                # TODO 1.2: Khai báo các thuộc tính tham số cho Tool tại đây...
+                "station_id": {
+                    "type": "string",
+                    "description": "Mã trạm sạc, ví dụ: 'ST001'"
+                },
+                "connector_id": {
+                    "type": "string",
+                    "description": "Mã cổng sạc, ví dụ: 'C01'"
+                },
+                "datetime_str": {
+                    "type": "string",
+                    "description": "Thời gian đặt sạc, ví dụ: '14:00 15/09/2026'"
+                },
+                "vehicle_id": {
+                    "type": "string",
+                    "description": "Mã xe hoặc biển số xe"
+                }
             },
-            "required": [] # TODO 1.2: Khai báo danh sách các trường bắt buộc tại đây...
+            "required": [
+                "station_id",
+                "connector_id",
+                "datetime_str",
+                "vehicle_id"
+            ]
         }
     }
 ]
@@ -54,58 +76,145 @@ TOOLS_SCHEMA = [
 # 2. MÔ PHỎNG DỮ LIỆU & HÀM THỰC THI TOOL (EXECUTION LAYER)
 # ==============================================================================
 
-MOCK_DATABASE = {
-    "SV2026001": {
-        "full_name": "Nguyễn Văn An",
-        "class": "AI-K4",
-        "gpa": 3.85,
-        "email": "an.nv@vinuni.edu.vn",
-        "status": "Đang học",
-        "advisor": "PGS.TS Nguyễn Văn A"
+_MOCK_DATABASE_TEMPLATE = {
+    "ST001": {
+        "name": "VinFast Landmark 81",
+        "location": "Bình Thạnh, TP.HCM",
+        "status": "OPEN",
+        "connectors": [
+            {
+                "connector_id": "C01",
+                "type": "DC Fast",
+                "status": "AVAILABLE"
+            },
+            {
+                "connector_id": "C02",
+                "type": "AC",
+                "status": "OCCUPIED"
+            }
+        ]
     },
-    "SV2026002": {
-        "full_name": "Trần Thị Bình",
-        "class": "AI-K4",
-        "gpa": 3.60,
-        "email": "binh.tt@vinuni.edu.vn",
-        "status": "Đang học",
-        "advisor": "TS. Lê Thị B"
+    "ST002": {
+        "name": "VinFast Thảo Điền",
+        "location": "Thảo Điền, TP.HCM",
+        "status": "OPEN",
+        "connectors": [
+            {
+                "connector_id": "C01",
+                "type": "DC Fast",
+                "status": "AVAILABLE"
+            }
+        ]
     }
 }
 
+MOCK_DATABASE = deepcopy(_MOCK_DATABASE_TEMPLATE)
 
-def execute_academic_query(student_id: str) -> str:
-    """Thực thi tra cứu học vụ theo mã sinh viên"""
-    student = MOCK_DATABASE.get(student_id.strip().upper())
-    if student:
+
+def reset_mock_database() -> None:
+    """Khôi phục dữ liệu giả lập để các test case không dùng chung trạng thái."""
+    global MOCK_DATABASE
+    MOCK_DATABASE = deepcopy(_MOCK_DATABASE_TEMPLATE)
+
+
+def execute_charging_station_query(
+    location: str,
+    datetime_str: str = "",
+    connector_type: str = ""
+) -> str:
+    """Tra cứu các trạm sạc đang mở và còn cổng phù hợp."""
+    requested_location = location.strip().lower()
+    requested_connector = connector_type.strip().lower()
+    matches = []
+
+    for station_id, station in MOCK_DATABASE.items():
+        available_connectors = [
+            connector for connector in station["connectors"]
+            if connector["status"] == "AVAILABLE"
+            and (
+                not requested_connector
+                or connector["type"].lower() == requested_connector
+            )
+        ]
+
+        if (
+            station["status"] == "OPEN"
+            and requested_location in station["location"].lower()
+            and available_connectors
+        ):
+            matches.append({
+                "station_id": station_id,
+                "name": station["name"],
+                "location": station["location"],
+                "available_connectors": available_connectors
+            })
+
+    if matches:
         return json.dumps({
             "status": "SUCCESS",
-            "student_id": student_id,
-            "data": student
+            "location": location,
+            "datetime": datetime_str,
+            "stations": matches
         }, ensure_ascii=False)
-    else:
+
+    return json.dumps({
+        "status": "NOT_FOUND",
+        "message": f"Không tìm thấy trạm sạc còn cổng phù hợp tại {location}."
+    }, ensure_ascii=False)
+
+
+def execute_reserve_charging_slot(
+    station_id: str,
+    connector_id: str,
+    datetime_str: str,
+    vehicle_id: str
+) -> str:
+    """Đặt trước một cổng sạc nếu cổng đó đang còn trống."""
+    station = MOCK_DATABASE.get(station_id.strip().upper())
+
+    if not station:
         return json.dumps({
             "status": "NOT_FOUND",
-            "message": f"Không tìm thấy dữ liệu sinh viên có mã '{student_id}'"
+            "message": f"Không tìm thấy trạm sạc '{station_id}'."
         }, ensure_ascii=False)
 
+    connector = next(
+        (
+            item for item in station["connectors"]
+            if item["connector_id"].upper() == connector_id.strip().upper()
+        ),
+        None
+    )
 
-def execute_schedule_appointment(student_id: str, datetime_str: str, advisor_name: str = "PGS.TS Nguyễn Văn A") -> str:
-    """Thực thi đặt lịch hẹn tư vấn học vụ"""
+    if not connector:
+        return json.dumps({
+            "status": "NOT_FOUND",
+            "message": f"Không tìm thấy cổng sạc '{connector_id}' tại trạm '{station_id}'."
+        }, ensure_ascii=False)
+
+    if connector["status"] != "AVAILABLE":
+        return json.dumps({
+            "status": "UNAVAILABLE",
+            "message": f"Cổng sạc '{connector_id}' hiện không còn trống."
+        }, ensure_ascii=False)
+
+    connector["status"] = "RESERVED"
+
     return json.dumps({
         "status": "SUCCESS",
-        "booking_id": f"BK-{student_id}-99",
-        "student_id": student_id,
+        "reservation_id": f"RS-{station_id}-{connector_id}-001",
+        "station_id": station_id,
+        "connector_id": connector_id,
         "datetime": datetime_str,
-        "advisor": advisor_name,
-        "message": f"Đặt lịch thành công cho sinh viên {student_id} với {advisor_name} vào lúc {datetime_str}."
+        "vehicle_id": vehicle_id,
+        "message": "Đặt trước cổng sạc thành công."
     }, ensure_ascii=False)
 
 
 # Router gọi tool thực tế
 TOOL_ROUTER = {
-    "academic_query": execute_academic_query,
-    "schedule_appointment": execute_schedule_appointment
+    "charging_station_query": execute_charging_station_query,
+    "reserve_charging_slot": execute_reserve_charging_slot
 }
 
 def dispatch_tool_call(tool_name: str, arguments: Dict[str, Any]) -> str:
